@@ -117,14 +117,8 @@ pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
 
 void ish_eval_line(struct ish_line_t *line) {
   int n = line->ncommands;
-  int status = 0;
-  if (n == 1) {
-    pid_t pid = ish_spawn(&line->commands[0], 0, 0);
-    waitpid(pid, &status, 0);
-    return;
-  }
 
-  int npipes = line->ncommands - 1;
+  int npipes = n - 1;
   int *pipes = malloc(sizeof(int) * npipes * 2);
   for (int i = 0; i < npipes; ++i) {
     pipe(pipes + 2*i);
@@ -142,6 +136,7 @@ void ish_eval_line(struct ish_line_t *line) {
     close(pipes[i]);
   }
 
+  int status = 0;
   pid_t wait_pid;
   while ((wait_pid = wait(&status)) > 0);
   free(pipes);
