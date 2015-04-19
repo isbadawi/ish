@@ -67,12 +67,19 @@ void ish_shlex(char *command, struct ish_line_t *line) {
   struct ish_command_t *cmd = &line->commands[j++];
   cmd->tokens[i++] = command;
   int space = 0;
+  int quote = 0;
   while (*command) {
-    if (*command == '|') {
-      line->ncommands ++;
+    if (*command == '"') {
+      *command = '\0';
+      if (!quote) {
+        cmd->tokens[i++] = command + 1;
+      }
+      quote = !quote;
+    } else if (*command == '|') {
+      line->ncommands++;
       cmd = &line->commands[j++];
       i = 0;
-    } else if (isspace(*command)) {
+    } else if (!quote && isspace(*command)) {
       *command = '\0';
       space = 1;
     } else if (space) {
