@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <wordexp.h>
 
 struct ish_builtin_t {
   const char *name;
@@ -52,7 +53,7 @@ char *ish_getline(void) {
 }
 
 struct ish_command_t {
-  char *tokens[100];
+  wordexp_t wordexp;
 };
 
 struct ish_line_t {
@@ -61,34 +62,18 @@ struct ish_line_t {
 };
 
 void ish_shlex(char *command, struct ish_line_t *line) {
-  line->ncommands = 1;
+  char *cmd = command;
   int i = 0;
-  int j = 0;
-  struct ish_command_t *cmd = &line->commands[j++];
-  cmd->tokens[i++] = command;
-  int space = 0;
-  int quote = 0;
   while (*command) {
-    if (*command == '"') {
+    if (*command == '|') {
       *command = '\0';
-      if (!quote) {
-        cmd->tokens[i++] = command + 1;
-      }
-      quote = !quote;
-    } else if (*command == '|') {
-      line->ncommands++;
-      cmd = &line->commands[j++];
-      i = 0;
-    } else if (!quote && isspace(*command)) {
-      *command = '\0';
-      space = 1;
-    } else if (space) {
-      cmd->tokens[i++] = command;
-      space = 0;
+      wordexp(cmd, &line->commands[i++].wordexp, 0);
+      cmd = command + 1;
     }
     command++;
   }
-  cmd->tokens[i++] = NULL;
+  wordexp(cmd, &line->commands[i++].wordexp, 0);
+  line->ncommands = i;
 }
 
 void set_cloexec(int fd, int on) {
@@ -117,7 +102,7 @@ pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
     dup2(writefd, STDOUT_FILENO);
   }
 
-  execvp(cmd->tokens[0], cmd->tokens);
+  execvp(cmd->wordexp.we_wordv[0], cmd->wordexp.we_wordv);
   // Should never get here...
   return 0;
 }
@@ -129,7 +114,7 @@ void ish_eval(char *command) {
 
   // TODO(isbadawi): Builtins & pipes?
   if (n == 1) {
-    char **tokens = line.commands[0].tokens;
+    char **tokens = line.commands[0].wordexp.we_wordv;
     struct ish_builtin_t *builtin = ish_get_builtin(tokens[0]);
     if (builtin) {
       builtin->action(tokens);
@@ -158,6 +143,9 @@ void ish_eval(char *command) {
   int status = 0;
   pid_t wait_pid;
   while ((wait_pid = wait(&status)) > 0);
+  for (int i = 0; i < n; ++i) {
+    wordfree(&line.commands[i].wordexp);
+  }
   free(pipes);
 }
 
