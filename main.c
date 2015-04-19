@@ -120,6 +120,16 @@ void ish_eval(char *command) {
   ish_shlex(command, &line);
   int n = line.ncommands;
 
+  // TODO(isbadawi): Builtins & pipes?
+  if (n == 1) {
+    char **tokens = line.commands[0].tokens;
+    struct ish_builtin_t *builtin = ish_get_builtin(tokens[0]);
+    if (builtin) {
+      builtin->action(tokens);
+      return;
+    }
+  }
+
   int npipes = n - 1;
   int *pipes = malloc(sizeof(int) * npipes * 2);
   for (int i = 0; i < npipes; ++i) {
