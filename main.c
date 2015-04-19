@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,10 +28,23 @@ void ish_builtin_exit(char **args) {
   exit(args[1] ? atoi(args[1]) : 0);
 }
 
+void ish_builtin_export(char **args) {
+  for (int i = 1; args[i]; ++i) {
+    char *eq = strchr(args[i], '=');
+    if (!eq) {
+      // TODO(isbadawi): Shell variables
+      continue;
+    }
+    *eq = '\0';
+    setenv(args[i], eq + 1, 1);
+  }
+}
+
 struct ish_builtin_t ish_builtins[] = {
   {"cd", ish_builtin_cd},
   {"pwd", ish_builtin_pwd},
   {"exit", ish_builtin_exit},
+  {"export", ish_builtin_export},
   {NULL, NULL}
 };
 
