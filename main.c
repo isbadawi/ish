@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -84,52 +84,64 @@ void ish_shlex(char *command, struct ish_line_t *line) {
   cmd->tokens[i++] = NULL;
 }
 
+void set_cloexec(int fd, int on) {
+  int flags = fcntl(fd, F_GETFD, 0);
+  if (on) {
+    flags |= FD_CLOEXEC;
+  } else {
+    flags &= ~FD_CLOEXEC;
+  }
+  fcntl(fd, F_SETFD, flags);
+}
+
+pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
+  pid_t pid = fork();
+  if (pid) {
+    return pid;
+  }
+
+  if (readfd) {
+    set_cloexec(readfd, 0);
+    dup2(readfd, STDIN_FILENO);
+  }
+
+  if (writefd) {
+    set_cloexec(writefd, 0);
+    dup2(writefd, STDOUT_FILENO);
+  }
+
+  execvp(cmd->tokens[0], cmd->tokens);
+  // Should never get here...
+  return 0;
+}
+
 void ish_eval_line(struct ish_line_t *line) {
   int n = line->ncommands;
+  int status = 0;
   if (n == 1) {
-    pid_t pid = fork();
-    int status = 0;
-    if (pid) {
-      waitpid(pid, &status, 0);
-      return;
-    } else {
-      char *name = line->commands[0].tokens[0];
-      char **argv = line->commands[0].tokens;
-      execvp(name, argv);
-    }
+    pid_t pid = ish_spawn(&line->commands[0], 0, 0);
+    waitpid(pid, &status, 0);
+    return;
   }
 
   int npipes = line->ncommands - 1;
   int *pipes = malloc(sizeof(int) * npipes * 2);
   for (int i = 0; i < npipes; ++i) {
     pipe(pipes + 2*i);
+    set_cloexec(pipes[2*i], 1);
+    set_cloexec(pipes[2*i + 1], 1);
   }
 
   for (int i = 0; i < n; ++i) {
-    if (!fork()) {
-      if (i != 0) {
-        dup2(pipes[2*i - 2], STDIN_FILENO);
-      }
-      if (i != n - 1) {
-        dup2(pipes[2*i + 1], STDOUT_FILENO);
-      }
-      for (int j = 0; j < npipes * 2; ++j) {
-        if (!((i != 0 && j == 2*i - 2) ||
-              (i != n - 1 && j == 2*i + 1))) {
-          close(pipes[j]);
-        }
-      }
-      char *name = line->commands[i].tokens[0];
-      char **argv = line->commands[i].tokens;
-      execvp(name, argv);
-    }
+    int readfd = i == 0 ? 0 : pipes[2*i - 2];
+    int writefd = i == n - 1 ? 0 : pipes[2*i + 1];
+    ish_spawn(&line->commands[i], readfd, writefd);
   }
 
   for (int i = 0; i < npipes * 2; ++i) {
     close(pipes[i]);
   }
 
-  int status = 0;
   pid_t wait_pid;
   while ((wait_pid = wait(&status)) > 0);
   free(pipes);
