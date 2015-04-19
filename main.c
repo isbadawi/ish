@@ -61,8 +61,43 @@ char *ish_getline(void) {
   char *line = NULL;
   size_t n = 0;
   getline(&line, &n, stdin);
+
   // Strip newline...
   line[strlen(line) - 1] = '\0';
+
+  // Strip comments (but not inside quotes)
+  int squote = 0;
+  int dquote = 0;
+  for (int i = 0; line[i]; ++i) {
+    if (line[i] == '"' && !squote) {
+      dquote = !dquote;
+    } else if (line[i] == '\'' && !dquote) {
+      squote = !squote;
+    } else if (line[i] == '#' && !squote && !dquote) {
+      line[i] = '\0';
+      break;
+    }
+  }
+
+  // If it's empty, bail out.
+  if (!*line) {
+    free(line);
+    return NULL;
+  }
+
+  // If it's all whitespace, bail out.
+  int allspace = 1;
+  for (int i = 0; line[i]; ++i) {
+    if (!isspace(line[i])) {
+      allspace = 0;
+      break;
+    }
+  }
+  if (allspace) {
+    free(line);
+    return NULL;
+  }
+
   return line;
 }
 
@@ -167,8 +202,10 @@ int main(int argc, char *argv[]) {
   while (1) {
     printf("ish$ ");
     char *line = ish_getline();
-    ish_eval(line);
-    free(line);
+    if (line) {
+      ish_eval(line);
+      free(line);
+    }
   }
   return 0;
 }
