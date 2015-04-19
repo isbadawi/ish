@@ -47,7 +47,7 @@ char *ish_getline(void) {
   size_t n = 0;
   getline(&line, &n, stdin);
   // Strip newline...
-  line[n - 2] = '\0';
+  line[strlen(line) - 1] = '\0';
   return line;
 }
 
