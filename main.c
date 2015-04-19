@@ -115,8 +115,10 @@ pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
   return 0;
 }
 
-void ish_eval_line(struct ish_line_t *line) {
-  int n = line->ncommands;
+void ish_eval(char *command) {
+  struct ish_line_t line;
+  ish_shlex(command, &line);
+  int n = line.ncommands;
 
   int npipes = n - 1;
   int *pipes = malloc(sizeof(int) * npipes * 2);
@@ -129,7 +131,7 @@ void ish_eval_line(struct ish_line_t *line) {
   for (int i = 0; i < n; ++i) {
     int readfd = i == 0 ? 0 : pipes[2*i - 2];
     int writefd = i == n - 1 ? 0 : pipes[2*i + 1];
-    ish_spawn(&line->commands[i], readfd, writefd);
+    ish_spawn(&line.commands[i], readfd, writefd);
   }
 
   for (int i = 0; i < npipes * 2; ++i) {
@@ -140,13 +142,6 @@ void ish_eval_line(struct ish_line_t *line) {
   pid_t wait_pid;
   while ((wait_pid = wait(&status)) > 0);
   free(pipes);
-}
-
-void ish_eval(char *command) {
-  struct ish_line_t line;
-  ish_shlex(command, &line);
-
-  ish_eval_line(&line);
 }
 
 int main(int argc, char *argv[]) {
