@@ -105,7 +105,11 @@ pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
     dup2(writefd, STDOUT_FILENO);
   }
 
-  execvp(cmd->wordexp.we_wordv[0], cmd->wordexp.we_wordv);
+  char **words = cmd->wordexp.we_wordv;
+  if (execvp(words[0], words) < 0) {
+    perror(words[0]);
+    return -1;
+  }
   // Should never get here...
   return 0;
 }
