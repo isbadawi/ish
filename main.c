@@ -181,8 +181,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  int interactive = fp == stdin && isatty(fileno(stdin));
+
   char *line;
-  if (fp == stdin) {
+  if (interactive) {
     printf("ish$ ");
   }
   while (ish_getline(fp, &line) >= 0) {
@@ -190,7 +192,7 @@ int main(int argc, char *argv[]) {
       ish_eval(line);
       free(line);
     }
-    if (fp == stdin) {
+    if (interactive) {
       printf("ish$ ");
     }
   }
