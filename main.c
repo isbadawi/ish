@@ -163,6 +163,8 @@ int main(int argc, char *argv[]) {
     case 'c':
       ish_eval(optarg);
       return 0;
+    case '?':
+      return 1;
     }
   }
 
