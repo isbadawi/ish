@@ -157,6 +157,15 @@ void ish_eval(char *command) {
 }
 
 int main(int argc, char *argv[]) {
+  int opt;
+  while ((opt = getopt(argc, argv, "c:")) != -1) {
+    switch (opt) {
+    case 'c':
+      ish_eval(optarg);
+      return 0;
+    }
+  }
+
   while (1) {
     printf("ish$ ");
     char *line = ish_getline();
