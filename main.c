@@ -59,13 +59,13 @@ int ish_getline(FILE *fp, char **line) {
   return 0;
 }
 
-struct ish_command_t {
+struct ish_process_t {
   wordexp_t wordexp;
 };
 
 struct ish_job_t {
-  struct ish_command_t commands[100];
-  int ncommands;
+  struct ish_process_t processes[100];
+  int nprocesses;
 };
 
 void ish_shlex(char *command, struct ish_job_t *line) {
@@ -74,13 +74,13 @@ void ish_shlex(char *command, struct ish_job_t *line) {
   while (*command) {
     if (*command == '|') {
       *command = '\0';
-      wordexp(cmd, &line->commands[i++].wordexp, 0);
+      wordexp(cmd, &line->processes[i++].wordexp, 0);
       cmd = command + 1;
     }
     command++;
   }
-  wordexp(cmd, &line->commands[i++].wordexp, 0);
-  line->ncommands = i;
+  wordexp(cmd, &line->processes[i++].wordexp, 0);
+  line->nprocesses = i;
 }
 
 void set_cloexec(int fd, int on) {
@@ -93,7 +93,7 @@ void set_cloexec(int fd, int on) {
   fcntl(fd, F_SETFD, flags);
 }
 
-pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
+pid_t ish_spawn(struct ish_process_t *proc, int readfd, int writefd) {
   pid_t pid = fork();
   if (pid) {
     return pid;
@@ -109,7 +109,7 @@ pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
     dup2(writefd, STDOUT_FILENO);
   }
 
-  char **words = cmd->wordexp.we_wordv;
+  char **words = proc->wordexp.we_wordv;
   if (execvp(words[0], words) < 0) {
     perror(words[0]);
     return -1;
@@ -121,11 +121,11 @@ pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
 void ish_eval(char *line) {
   struct ish_job_t job;
   ish_shlex(line, &job);
-  int n = job.ncommands;
+  int n = job.nprocesses;
 
   // TODO(isbadawi): Builtins & pipes?
   if (n == 1) {
-    char **tokens = job.commands[0].wordexp.we_wordv;
+    char **tokens = job.processes[0].wordexp.we_wordv;
     struct ish_builtin_t *builtin = ish_builtin_get(tokens[0]);
     if (builtin) {
       builtin->action(tokens);
@@ -144,7 +144,7 @@ void ish_eval(char *line) {
   for (int i = 0; i < n; ++i) {
     int readfd = i == 0 ? 0 : pipes[2*i - 2];
     int writefd = i == n - 1 ? 0 : pipes[2*i + 1];
-    ish_spawn(&job.commands[i], readfd, writefd);
+    ish_spawn(&job.processes[i], readfd, writefd);
   }
 
   for (int i = 0; i < npipes * 2; ++i) {
@@ -155,7 +155,7 @@ void ish_eval(char *line) {
   pid_t wait_pid;
   while ((wait_pid = wait(&status)) > 0);
   for (int i = 0; i < n; ++i) {
-    wordfree(&job.commands[i].wordexp);
+    wordfree(&job.processes[i].wordexp);
   }
   free(pipes);
 }
