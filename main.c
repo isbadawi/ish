@@ -63,12 +63,12 @@ struct ish_command_t {
   wordexp_t wordexp;
 };
 
-struct ish_line_t {
+struct ish_job_t {
   struct ish_command_t commands[100];
   int ncommands;
 };
 
-void ish_shlex(char *command, struct ish_line_t *line) {
+void ish_shlex(char *command, struct ish_job_t *line) {
   char *cmd = command;
   int i = 0;
   while (*command) {
@@ -118,14 +118,14 @@ pid_t ish_spawn(struct ish_command_t *cmd, int readfd, int writefd) {
   return 0;
 }
 
-void ish_eval(char *command) {
-  struct ish_line_t line;
-  ish_shlex(command, &line);
-  int n = line.ncommands;
+void ish_eval(char *line) {
+  struct ish_job_t job;
+  ish_shlex(line, &job);
+  int n = job.ncommands;
 
   // TODO(isbadawi): Builtins & pipes?
   if (n == 1) {
-    char **tokens = line.commands[0].wordexp.we_wordv;
+    char **tokens = job.commands[0].wordexp.we_wordv;
     struct ish_builtin_t *builtin = ish_builtin_get(tokens[0]);
     if (builtin) {
       builtin->action(tokens);
@@ -144,7 +144,7 @@ void ish_eval(char *command) {
   for (int i = 0; i < n; ++i) {
     int readfd = i == 0 ? 0 : pipes[2*i - 2];
     int writefd = i == n - 1 ? 0 : pipes[2*i + 1];
-    ish_spawn(&line.commands[i], readfd, writefd);
+    ish_spawn(&job.commands[i], readfd, writefd);
   }
 
   for (int i = 0; i < npipes * 2; ++i) {
@@ -155,7 +155,7 @@ void ish_eval(char *command) {
   pid_t wait_pid;
   while ((wait_pid = wait(&status)) > 0);
   for (int i = 0; i < n; ++i) {
-    wordfree(&line.commands[i].wordexp);
+    wordfree(&job.commands[i].wordexp);
   }
   free(pipes);
 }
