@@ -3,7 +3,6 @@
 #include <ctype.h>
 #include <signal.h>
 #include <stdlib.h>
-#include <string.h>
 #include <wordexp.h>
 
 #include "job.h"
@@ -11,13 +10,13 @@
 int ish_getline(FILE *fp, char **line) {
   size_t n = 0;
   *line = NULL;
-  int rc = getline(line, &n, fp);
-  if (rc < 0) {
-    return rc;
+  int len = getline(line, &n, fp);
+  if (len < 0) {
+    return len;
   }
 
   // Strip newline...
-  (*line)[strlen(*line) - 1] = '\0';
+  (*line)[len - 1] = '\0';
 
   // Strip comments (but not inside quotes)
   int squote = 0;
