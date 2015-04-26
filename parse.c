@@ -62,15 +62,18 @@ void ish_shlex(char *command, struct ish_job_t *job) {
   signal(SIGCHLD, SIG_DFL);
   char *cmd = command;
   struct ish_process_t *proc = ish_job_process_create(job);
+  wordexp_t exp;
   while (*command) {
     if (*command == '|') {
       *command = '\0';
-      wordexp(cmd, &proc->wordexp, 0);
+      wordexp(cmd, &exp, 0);
+      proc->argv = exp.we_wordv;
       cmd = command + 1;
       proc = ish_job_process_create(job);
     }
     command++;
   }
-  wordexp(cmd, &proc->wordexp, 0);
+  wordexp(cmd, &exp, 0);
+  proc->argv = exp.we_wordv;
   signal(SIGCHLD, SIG_IGN);
 }

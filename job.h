@@ -5,7 +5,7 @@
 #include <sys/types.h>
 
 struct ish_process_t {
-  wordexp_t wordexp;
+  char **argv;
   pid_t pid;
   int done;
 

@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <wordexp.h>
 
 #include "builtin.h"
 #include "job.h"
@@ -51,9 +50,8 @@ pid_t ish_spawn(struct ish_process_t *proc, pid_t pgid,
     close(writefd);
   }
 
-  char **words = proc->wordexp.we_wordv;
-  execvp(words[0], words);
-  perror(words[0]);
+  execvp(proc->argv[0], proc->argv);
+  perror(proc->argv[0]);
   exit(1);
   return -1;
 }
@@ -61,10 +59,10 @@ pid_t ish_spawn(struct ish_process_t *proc, pid_t pgid,
 void ish_eval_job(struct ish_shell_t *shell, struct ish_job_t *job) {
   // TODO(isbadawi): Builtins & pipes?
   if (!job->processes->next) {
-    char **tokens = job->processes->wordexp.we_wordv;
-    struct ish_builtin_t *builtin = ish_builtin_get(tokens[0]);
+    char **argv = job->processes->argv;
+    struct ish_builtin_t *builtin = ish_builtin_get(argv[0]);
     if (builtin) {
-      builtin->action(shell, tokens);
+      builtin->action(shell, argv);
       return;
     }
   }
@@ -104,7 +102,6 @@ void ish_eval_job(struct ish_shell_t *shell, struct ish_job_t *job) {
       ish_shell_add_stopped_job(shell, job);
     } else if (WIFEXITED(status) || WIFSIGNALED(status)) {
       struct ish_process_t *proc = ish_job_get_process(job, wait_pid);
-      wordfree(&proc->wordexp);
       proc->done = 1;
     }
   } while (!job->stopped && !ish_job_done(job));
