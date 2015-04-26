@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "job.h"
+#include "list.h"
 
 static void ish_builtin_cd(struct ish_shell_t *shell, char **args) {
   chdir(args[1] ? args[1] : getenv("HOME"));
@@ -36,7 +37,7 @@ void ish_builtin_export(struct ish_shell_t *shell, char **args) {
 
 void ish_builtin_jobs(struct ish_shell_t *shell, char **args) {
   int i = 1;
-  for (struct ish_job_t *job = shell->stopped_jobs; job; job = job->next) {
+  ISH_LIST_FOR_EACH(struct ish_job_t*, shell->stopped_jobs, job) {
     printf("[%d]+  Stopped                %s\n", i++, job->command_line);
   }
 }

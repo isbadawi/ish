@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "list.h"
+
 struct ish_job_t *ish_job_create(void) {
   struct ish_job_t *job = malloc(sizeof(*job));
   if (!job) {
@@ -16,8 +18,7 @@ struct ish_job_t *ish_job_create(void) {
 
 void ish_shell_add_stopped_job(struct ish_shell_t *shell, struct ish_job_t *job) {
   job->stopped = 1;
-  job->next = shell->stopped_jobs;
-  shell->stopped_jobs = job;
+  ISH_LIST_PREPEND(struct ish_job_t*, shell->stopped_jobs, job);
   printf("[1]+  Stopped                %s\n", job->command_line);
 }
 
@@ -27,21 +28,13 @@ struct ish_process_t *ish_job_process_create(struct ish_job_t *job) {
     return NULL;
   }
   proc->done = 0;
-  if (!job->processes) {
-    job->processes = proc;
-  } else {
-    struct ish_process_t *p = job->processes;
-    while (p->next) {
-      p = p->next;
-    }
-    p->next = proc;
-  }
+  ISH_LIST_APPEND(struct ish_process_t *, job->processes, proc);
   proc->next = NULL;
   return proc;
 }
 
 struct ish_process_t *ish_job_get_process(struct ish_job_t *job, pid_t pid) {
-  FOR_EACH_PROCESS_IN_JOB(job, proc) {
+  ISH_LIST_FOR_EACH(struct ish_process_t*, job->processes, proc) {
     if (proc->pid == pid) {
       return proc;
     }
@@ -50,7 +43,7 @@ struct ish_process_t *ish_job_get_process(struct ish_job_t *job, pid_t pid) {
 }
 
 int ish_job_done(struct ish_job_t *job) {
-  FOR_EACH_PROCESS_IN_JOB(job, proc) {
+  ISH_LIST_FOR_EACH(struct ish_process_t*, job->processes, proc) {
     if (!proc->done) {
       return 0;
     }

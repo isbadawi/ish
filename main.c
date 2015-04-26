@@ -9,6 +9,7 @@
 
 #include "builtin.h"
 #include "job.h"
+#include "list.h"
 #include "parse.h"
 
 void set_cloexec(int fd) {
@@ -71,7 +72,7 @@ void ish_eval_job(struct ish_shell_t *shell, struct ish_job_t *job) {
   int pipefds[2];
   int writefd;
   int readfd = STDIN_FILENO;
-  FOR_EACH_PROCESS_IN_JOB(job, proc) {
+  ISH_LIST_FOR_EACH(struct ish_process_t*, job->processes, proc) {
     if (proc->next) {
       pipe(pipefds);
       set_cloexec(pipefds[0]);
