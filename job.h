@@ -1,5 +1,5 @@
-#ifndef _ish_h_included
-#define _ish_h_included
+#ifndef _ish_job_h_included
+#define _ish_job_h_included
 
 #include <wordexp.h>
 #include <sys/types.h>
