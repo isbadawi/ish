@@ -2,10 +2,11 @@
 #define _ish_parse_h_included
 
 #include <stdio.h>
+#include <stddef.h>
 
 struct ish_job_t;
 
-int ish_getline(FILE *fp, char **line);
+ssize_t ish_getline(FILE *fp, char **line);
 void ish_shlex(char *line, struct ish_job_t *job);
 
 #endif

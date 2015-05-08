@@ -9,21 +9,24 @@
 #include "job.h"
 #include "list.h"
 
-static void ish_builtin_cd(struct ish_shell_t *shell, char **args) {
+#define UNUSED __attribute__((unused))
+
+static void ish_builtin_cd(struct ish_shell_t *shell UNUSED, char **args) {
   chdir(args[1] ? args[1] : getenv("HOME"));
 }
 
-static void ish_builtin_pwd(struct ish_shell_t *shell, char **args) {
+static void ish_builtin_pwd(struct ish_shell_t *shell UNUSED, char **args UNUSED) {
   char *pwd = getcwd(NULL, 0);
   printf("%s\n", pwd);
   free(pwd);
 }
 
-static void ish_builtin_exit(struct ish_shell_t *shell, char **args) {
+__attribute__((noreturn))
+static void ish_builtin_exit(struct ish_shell_t *shell UNUSED, char **args) {
   exit(args[1] ? atoi(args[1]) : 0);
 }
 
-void ish_builtin_export(struct ish_shell_t *shell, char **args) {
+static void ish_builtin_export(struct ish_shell_t *shell UNUSED, char **args) {
   for (int i = 1; args[i]; ++i) {
     char *eq = strchr(args[i], '=');
     if (!eq) {
@@ -35,14 +38,14 @@ void ish_builtin_export(struct ish_shell_t *shell, char **args) {
   }
 }
 
-void ish_builtin_jobs(struct ish_shell_t *shell, char **args) {
+static void ish_builtin_jobs(struct ish_shell_t *shell, char **args UNUSED) {
   int i = 1;
   ISH_LIST_FOR_EACH(struct ish_job_t*, shell->stopped_jobs, job) {
     printf("[%d]+  Stopped                %s\n", i++, job->command_line);
   }
 }
 
-void ish_builtin_fg(struct ish_shell_t *shell, char **args) {
+static void ish_builtin_fg(struct ish_shell_t *shell, char **args) {
   if (!shell->stopped_jobs) {
     fprintf(stderr, "fg: current: no such job\n");
     return;
@@ -55,7 +58,7 @@ void ish_builtin_fg(struct ish_shell_t *shell, char **args) {
   }
 }
 
-struct ish_builtin_t ish_builtins[] = {
+static struct ish_builtin_t ish_builtins[] = {
   {"cd", ish_builtin_cd},
   {"pwd", ish_builtin_pwd},
   {"exit", ish_builtin_exit},

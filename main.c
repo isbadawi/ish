@@ -11,13 +11,13 @@
 #include "list.h"
 #include "parse.h"
 
-void set_cloexec(int fd) {
+static void set_cloexec(int fd) {
   int flags = fcntl(fd, F_GETFD, 0);
   flags |= FD_CLOEXEC;
   fcntl(fd, F_SETFD, flags);
 }
 
-pid_t ish_spawn(struct ish_process_t *proc, pid_t pgid,
+static pid_t ish_spawn(struct ish_process_t *proc, pid_t pgid,
                 int readfd, int writefd) {
   pid_t pid = fork();
   if (pid) {
@@ -53,10 +53,9 @@ pid_t ish_spawn(struct ish_process_t *proc, pid_t pgid,
   execvp(proc->argv[0], proc->argv);
   perror(proc->argv[0]);
   exit(1);
-  return -1;
 }
 
-void ish_eval_job(struct ish_shell_t *shell, struct ish_job_t *job) {
+static void ish_eval_job(struct ish_shell_t *shell, struct ish_job_t *job) {
   // TODO(isbadawi): Builtins & pipes?
   if (!job->processes->next) {
     char **argv = job->processes->argv;
@@ -111,7 +110,7 @@ void ish_eval_job(struct ish_shell_t *shell, struct ish_job_t *job) {
 
 // Job control stuff. Reference:
 // https://ftp.gnu.org/old-gnu/Manuals/glibc-2.2.3/html_chapter/libc_27.html
-void ish_init_job_control(void) {
+static void ish_init_job_control(void) {
   pid_t pgid;
   // Loop until we're in the foreground...
   while (tcgetpgrp(STDIN_FILENO) != (pgid = getpgrp())) {
@@ -136,7 +135,7 @@ void ish_init_job_control(void) {
   tcsetpgrp(STDIN_FILENO, pgid);
 }
 
-void ish_eval_line(struct ish_shell_t *shell, char *line) {
+static void ish_eval_line(struct ish_shell_t *shell, char *line) {
   struct ish_job_t *job = ish_job_create();
   ish_shlex(line, job);
   ish_eval_job(shell, job);

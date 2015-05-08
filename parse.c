@@ -7,10 +7,10 @@
 
 #include "job.h"
 
-int ish_getline(FILE *fp, char **line) {
+ssize_t ish_getline(FILE *fp, char **line) {
   size_t n = 0;
   *line = NULL;
-  int len = getline(line, &n, fp);
+  ssize_t len = getline(line, &n, fp);
   if (len < 0) {
     return len;
   }

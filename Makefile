@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -Wall -Werror -pedantic -g
+CFLAGS = -Weverything -Werror -g
 OUTPUT_OPTION = -MMD -MP -o $@
 
 SRCS = $(wildcard *.c)
